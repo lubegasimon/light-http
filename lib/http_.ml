@@ -83,14 +83,14 @@ module Response = struct
     body : string option;
   }
 
-  let parse_headers rest =
+  let parse_headers =
     let rec aux acc = function
       | "\r" :: xs -> (List.rev acc, xs (* "\r" denotes end of header section *))
       (* Header section *)
       | x :: xs -> aux ((String.trim x |> Header.of_string) :: acc) xs
       | [] -> ([], [])
     in
-    aux [] rest
+    aux []
 
   let get_status_line_parts status_line =
     let line_parts = String.(split_on_char ' ' (trim status_line)) in

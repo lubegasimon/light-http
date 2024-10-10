@@ -36,12 +36,11 @@ let () =
       version = `Http_1_1;
     }
   in
-  let response = Lwt_main.run (send_http_request request) in
-  let { Response.status_code; status_msg; headers; version; body } = response in
+  let res = Lwt_main.run (send_http_request request) in
   Printf.printf "Received response : \n\n";
   Printf.printf "%s %s %s\r\n%s\r\n%s\n"
-    (Version.to_string version)
-    (Status.code_to_string status_code)
-    (Status.msg_to_string status_msg)
-    (Header.to_string (Option.get headers))
-    (Option.get body)
+    (Version.to_string res.version)
+    (Status.code_to_string res.status_code)
+    (Status.msg_to_string res.status_msg)
+    (Header.to_string (Option.get res.headers))
+    (Option.get res.body)
