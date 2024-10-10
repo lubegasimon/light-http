@@ -1,0 +1,12 @@
+https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.4
+- The contents within a given header field value are SHOULD NOT parsed
+  unitl a later stage of message interpretation (usually after the message's
+  entire header section has been processed)
+- Given a header section, extract field name and field value from it by a generic
+  field parser.
+- No whitespace is allowed between the header field-name and colon.
+  A server MUST reject any received request message that contains whitespace
+  between a header field-name and colon with a response code of 400 (Bad Request).
+- type check headers fields
+- string concat [^] is inefficient on long strings, avoid it where necessary
+- Implement server logging
