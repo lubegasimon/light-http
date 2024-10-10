@@ -9,4 +9,5 @@ https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.4
   between a header field-name and colon with a response code of 400 (Bad Request).
 - type check headers fields
 - string concat [^] is inefficient on long strings, avoid it where necessary
-- Implement server logging
+- Improve server logging on incoming requests
+- Do away with 'failwith's, introduce exceptions and error handling
