@@ -1,3 +1,2 @@
 (library
- (name http_)
- (libraries conduit-lwt-unix))
+ (name http_))
