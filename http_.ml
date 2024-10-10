@@ -1,5 +1,5 @@
 (* http/1.1 protocol implementation *)
-(* open Conduit_lwt_unix *)
+
 open Lwt
 
 module Version = struct
@@ -17,19 +17,11 @@ module Meth = struct
   type t = [ `GET | `HEAD ]
 
   let to_string = function `GET -> "GET" | `HEAD -> "HEAD"
-
-  let _of_string = function
-    | "GET" -> `GET
-    | "HEAD" -> `HEAD
-    | _ -> failwith "Method is unimplemented"
 end
 
 module Header = struct
   type t = string * string
-  (* type headers = t list *)
 
-  (* TODO: type check headers *)
-  (* TODO: Perf: string concat [^] is inefficient *)
   let to_string headers =
     List.map (fun (k, v) -> k ^ ": " ^ v ^ "\r\n") headers |> String.concat ""
 
@@ -76,12 +68,6 @@ module Status = struct
     | `OK -> "OK"
     | `Continue -> "Continue"
     | `Switching_protocols -> "Switching_protocols"
-
-  let _msg_of_string = function
-    | "OK" -> `OK
-    | "Continue" -> `Continue
-    | "Switching_protocols" -> `Switching_protocols
-    | _ -> failwith "Unknown status message"
 end
 
 module Response = struct
@@ -92,16 +78,6 @@ module Response = struct
     version : Version.t;
     body : string option;
   }
-
-  (** [parse_req req] parses request [req] and constructs response *)
-  let _parse_req (req : Request.t) =
-    let { Request.meth; version; _ } = req in
-    if Meth.to_string meth <> "GET" then failwith "Expected a GET method"
-    else
-      let status_code = `Code 200 in
-      let status_msg = `OK in
-      let headers = None in
-      { status_code; status_msg; headers; version; body = Some "Hello world" }
 
   let of_string res =
     let lines = String.split_on_char '\n' res in
@@ -117,7 +93,6 @@ module Response = struct
           | version :: code :: _msg -> (version, code)
           | _ -> failwith "Invalid status line"
         in
-        (* parse headers *)
         let parse_headers rest =
           let rec aux acc = function
             | "\r" :: xs ->
@@ -143,22 +118,6 @@ module Response = struct
         in
         let body = Some (String.concat "" body) in
         { version; status_code; status_msg; headers; body }
-
-  (** [to_string res] is http response string *)
-  let _to_string res =
-    let { status_code; status_msg; version; headers; body } = res in
-    let open Status in
-    let headers =
-      match headers with
-      | Some headers -> Header.to_string headers ^ "\r\n"
-      | None -> ""
-    in
-    let body = match body with Some body -> body | None -> "" in
-    let status_line =
-      Version.to_string version ^ code_to_string status_code ^ " "
-      ^ msg_to_string status_msg ^ "\r\n"
-    in
-    status_line ^ headers ^ body
 end
 
 let connect_to_server =
@@ -178,7 +137,6 @@ let receive_response sock =
   let%lwt bytes_read = Lwt_unix.read sock buf 0 buf_size in
   if bytes_read == 0 then Lwt.return (Bytes.to_string Bytes.empty)
   else
-    (* accumulate whatever you read *)
     let contents = Bytes.sub_string buf 0 bytes_read in
     Lwt.return contents
 

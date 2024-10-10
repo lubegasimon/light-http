@@ -5,7 +5,7 @@ let () =
     {
       Request.meth = `GET;
       uri = "/";
-      headers = Some [ ("Host", "localhost:6000"); ("Connection", "close") ];
+      headers = Some [ ("Host", "localhost:5000"); ("Connection", "close") ];
       version = `Http_1_1;
     }
   in
