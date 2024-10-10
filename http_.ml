@@ -1,7 +1,5 @@
 (* http/1.1 protocol implementation *)
 
-open Lwt
-
 module Version = struct
   type t = [ `Http_1_1 | `Http_1_0 ]
 
@@ -119,29 +117,3 @@ module Response = struct
         let body = Some (String.concat "" body) in
         { version; status_code; status_msg; headers; body }
 end
-
-let connect_to_server =
-  let open Lwt_unix in
-  let sock = socket PF_INET SOCK_STREAM 0 in
-  let addr = ADDR_INET (Unix.inet_addr_loopback, 5000) in
-  connect sock addr >>= fun _ -> Lwt.return sock
-
-let send_request sock req =
-  let req_str = Request.to_string req in
-  let req_bytes = Bytes.of_string req_str in
-  Lwt_unix.write sock req_bytes 0 (Bytes.length req_bytes)
-
-let receive_response sock =
-  let buf_size = 4096 in
-  let buf = Bytes.create buf_size in
-  let%lwt bytes_read = Lwt_unix.read sock buf 0 buf_size in
-  if bytes_read == 0 then Lwt.return (Bytes.to_string Bytes.empty)
-  else
-    let contents = Bytes.sub_string buf 0 bytes_read in
-    Lwt.return contents
-
-let send_http_request request =
-  connect_to_server >>= fun sock ->
-  send_request sock request >>= fun _ ->
-  receive_response sock >>= fun res_str ->
-  Lwt_unix.close sock >>= fun _ -> Lwt.return (Response.of_string res_str)
