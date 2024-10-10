@@ -19,4 +19,6 @@ let server =
   in
   accept_loop ()
 
-let () = Lwt_main.run server
+let () =
+  let open Lwt.Infix in
+  Lwt_main.run (Lwt_io.printf "Server starting ...\n\n" >>= fun () -> server)

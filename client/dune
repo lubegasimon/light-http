@@ -1,5 +1,5 @@
 (executable
  (name client)
- (libraries http_ lwt.unix)
+ (libraries lib lwt.unix)
  (preprocess
   (pps lwt_ppx)))

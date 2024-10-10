@@ -1,4 +1,4 @@
-open Http_
+open Lib.Http
 open Lwt.Infix
 open Lwt_unix
 
@@ -25,7 +25,7 @@ let send_http_request request =
   connect_to_server >>= fun sock ->
   send_request sock request >>= fun _ ->
   receive_response sock >>= fun res_str ->
-  close sock >>= fun _ -> Lwt.return (Response.of_string res_str)
+  Lwt.return (Response.of_string res_str)
 
 let () =
   let request =

@@ -1,2 +1,3 @@
 (library
- (name http_))
+ (name lib)
+ (modules http))
