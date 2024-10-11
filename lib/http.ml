@@ -1,5 +1,12 @@
 (* http/1.1 protocol implementation *)
 
+exception Invalid_method
+exception Invalid_request
+exception Invalid_request_line
+exception Invalid_fst_line
+exception Version_not_implemented
+exception No_response
+
 module Version = struct
   type t = [ `Http_1_1 | `Http_1_0 ]
 
@@ -8,7 +15,7 @@ module Version = struct
   let of_string = function
     | "HTTP/1.0" -> `Http_1_0
     | "HTTP/1.1" -> `Http_1_1
-    | _ -> failwith "Version is unimplemented"
+    | _ -> raise Version_not_implemented
 end
 
 module Meth = struct
