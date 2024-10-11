@@ -1,6 +1,6 @@
-open Lib.Http
 open Lwt.Infix
 open Lwt_unix
+open Lib.Http
 
 let connect_to_server =
   let sock = socket PF_INET SOCK_STREAM 0 in
@@ -32,15 +32,17 @@ let () =
     {
       Request.meth = `GET;
       uri = "/";
-      headers = Some [ ("Host", "localhost:5000"); ("Connection", "close") ];
+      headers = [ ("Host", "localhost:5000"); ("Connection", "close") ];
       version = `Http_1_1;
+      body = Some "Hello there";
     }
   in
   let res = Lwt_main.run (send_http_request request) in
+  let body = match res.body with None -> "" | Some body -> body in
   Printf.printf "Received response : \n\n";
   Printf.printf "%s %s %s\r\n%s\r\n%s\n"
     (Version.to_string res.version)
     (Status.code_to_string res.status_code)
     (Status.msg_to_string res.status_msg)
-    (Header.to_string (Option.get res.headers))
-    (Option.get res.body)
+    (Header.to_string res.headers)
+    body

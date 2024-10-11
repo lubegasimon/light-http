@@ -1,11 +1,9 @@
 (* http/1.1 protocol implementation *)
 
 exception Invalid_method
-exception Invalid_request
-exception Invalid_request_line
-exception Invalid_fst_line
+exception Invalid_first_line
 exception Version_not_implemented
-exception No_response
+exception Invalid_http_string
 
 module Version = struct
   type t = [ `Http_1_1 | `Http_1_0 ]
@@ -22,40 +20,85 @@ module Meth = struct
   type t = [ `GET | `HEAD ]
 
   let to_string = function `GET -> "GET" | `HEAD -> "HEAD"
+
+  let of_string = function
+    | "GET" -> `GET
+    | "HEAD" -> `HEAD
+    | _ -> raise Invalid_method
 end
 
 module Header = struct
   type t = string * string
+  type headers = t list
 
   let to_string headers =
     List.map (fun (k, v) -> k ^ ": " ^ v ^ "\r\n") headers |> String.concat ""
 
-  let of_string header_section : t =
+  let of_string header_section : headers =
     let header = String.split_on_char ':' header_section in
     match header with
-    | [ field_name; field_value ] -> (field_name, field_value)
-    | _ -> failwith "Header is unimplemented"
+    | [ field_name; field_value ] -> [ (field_name, field_value) ]
+    | _ -> []
 end
+
+(** [parse_http_str x] is first line of HTTP string [x] *)
+let parse_http_str http_str =
+  let lines = String.(split_on_char '\n' (trim http_str)) in
+  match lines with
+  | fst_ln :: rest -> (
+      let fst_ln_parts = String.(split_on_char ' ' (trim fst_ln)) in
+      match fst_ln_parts with
+      | fst :: snd :: lst :: _ -> ((fst, snd, lst), rest)
+      | _ -> raise Invalid_first_line)
+  | [] -> raise Invalid_http_string
+
+(** [parse_others x] is header section and body of parts [x] of HTTP string *)
+let parse_others =
+  let rec aux acc = function
+    | "\r" :: body ->
+        ( List.(rev (flatten acc)),
+          Some (String.concat "" body) (* "\r" denotes end of header section *)
+        )
+    (* Header section *)
+    | x :: xs -> aux ((String.trim x |> Header.of_string) :: acc) xs
+    | [] -> ([], Some "")
+  in
+  aux []
 
 module Request = struct
   type t = {
     meth : Meth.t;
     uri : string;
-    headers : Header.t list option;
+    headers : Header.headers;
     version : Version.t;
+    body : string option;
   }
 
   let to_string req =
-    let { meth; uri; version; headers } = req in
-    let req_line =
-      Meth.to_string meth ^ " " ^ uri ^ " " ^ Version.to_string version ^ "\r\n"
+    let req_ln =
+      Meth.to_string req.meth ^ " " ^ req.uri ^ " "
+      ^ Version.to_string req.version
+      ^ "\r\n"
     in
     let header =
-      match headers with
-      | Some headers -> Header.to_string headers ^ "\r\n"
-      | None -> ""
+      match req.headers with
+      | [] -> "\r\n"
+      | headers -> Header.to_string headers ^ "\r\n"
     in
-    req_line ^ header
+
+    let body = match req.body with Some body -> body | None -> "" in
+    req_ln ^ header ^ body
+
+  let of_string http_req_str =
+    let (meth, uri, version), rest = parse_http_str http_req_str in
+    let headers, body = parse_others rest in
+    {
+      meth = Meth.of_string meth;
+      uri;
+      version = Version.of_string version;
+      headers;
+      body;
+    }
 end
 
 module Status = struct
@@ -64,65 +107,51 @@ module Status = struct
 
   (* 2xx success codes, The action was successfully received, understood, and accepted *)
   type success = [ `OK ]
-  type msg = [ informational | success ]
+
+  (* 4xx are client error codes *)
+  type client_err = [ `Method_not_allowed ]
+
+  (* 5xx are server error codes *)
+  type server_err = [ `Not_implemented ]
+  type msg = [ informational | success | client_err | server_err ]
   type code = [ `Code of int ]
 
   let code_to_string = function `Code code -> string_of_int code
+  let code_of_string = function `Code code -> string_of_int code
 
   let msg_to_string = function
     | `OK -> "OK"
     | `Continue -> "Continue"
-    | `Switching_protocols -> "Switching_protocols"
+    | `Switching_protocols -> "Switching Protocols"
+    | `Method_not_allowed -> "Method Not Allowed"
+    | `Not_implemented -> "Not Implemented"
 
   let msg_of_code = function
     | `Code 200 -> `OK
     | `Code 100 -> `Continue
     | `Code 101 -> `Switching_protocols
-    | _ -> failwith "Unimplemented status code"
+    | `Code 405 -> `Method_not_allowed
+    | `Code 501 | _ -> `Not_implemented
 end
 
 module Response = struct
   type response = {
     status_code : Status.code;
     status_msg : Status.msg;
-    headers : Header.t list option;
+    headers : Header.headers;
     version : Version.t;
     body : string option;
   }
 
-  let parse_headers =
-    let rec aux acc = function
-      | "\r" :: xs -> (List.rev acc, xs (* "\r" denotes end of header section *))
-      (* Header section *)
-      | x :: xs -> aux ((String.trim x |> Header.of_string) :: acc) xs
-      | [] -> ([], [])
-    in
-    aux []
-
-  let get_status_line_parts status_line =
-    let line_parts = String.(split_on_char ' ' (trim status_line)) in
-    match line_parts with
-    (* we ignore msg because we can compute it from the code *)
-    | version :: code :: _msg ->
-        let version = Version.of_string version in
-        let code = `Code (int_of_string code) in
-        let msg = Status.msg_of_code code in
-        (version, code, msg)
-    | _ -> failwith "Invalid status line"
-
-  let of_string res =
-    let lines = String.split_on_char '\n' res in
-    match lines with
-    | [] -> failwith "Empty response"
-    | status_line :: rest ->
-        let version, status_code, status_msg =
-          get_status_line_parts status_line
-        in
-        let headers, body =
-          let headers, body = parse_headers rest in
-          let headers = match headers with [] -> None | xs -> Some xs in
-          let body = Some (String.concat "" body) in
-          (headers, body)
-        in
-        { version; status_code; status_msg; headers; body }
+  let of_string http_res_str =
+    let (version, code, _msg), rest = parse_http_str http_res_str in
+    let headers, body = parse_others rest in
+    let status_code = `Code (int_of_string code) in
+    {
+      version = Version.of_string version;
+      status_code;
+      status_msg = Status.msg_of_code status_code;
+      headers;
+      body;
+    }
 end
