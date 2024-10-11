@@ -88,30 +88,12 @@ module Request = struct
 
     let body = match req.body with Some body -> body | None -> "" in
     req_ln ^ header ^ body
-
-  let of_string http_req_str =
-    let (meth, uri, version), rest = parse_http_str http_req_str in
-    let headers, body = parse_others rest in
-    {
-      meth = Meth.of_string meth;
-      uri;
-      version = Version.of_string version;
-      headers;
-      body;
-    }
 end
 
 module Status = struct
-  (* 1xx codes - Request received, continuing process *)
   type informational = [ `Continue | `Switching_protocols ]
-
-  (* 2xx success codes, The action was successfully received, understood, and accepted *)
   type success = [ `OK ]
-
-  (* 4xx are client error codes *)
   type client_err = [ `Method_not_allowed ]
-
-  (* 5xx are server error codes *)
   type server_err = [ `Not_implemented ]
   type msg = [ informational | success | client_err | server_err ]
   type code = [ `Code of int ]
