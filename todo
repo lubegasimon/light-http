@@ -11,6 +11,7 @@ https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.4
 - Improve server logging on incoming requests
 - Do away with 'failwith's, introduce exceptions and error handling
 - Testing; unit testing, integration testing
+- add opam file
 
 Performance
 -----------
