@@ -23,12 +23,19 @@ let keep_listening =
     let out_chan = Lwt_io.of_fd ~mode:Lwt_io.Output client_sock in
     let%lwt incoming_req = Lwt_io.read ~count:1024 in_chan in
     Lwt_io.printl incoming_req >>= fun () ->
-    Lwt_io.write out_chan response_str >>= fun () -> accept_loop ()
+    match state server_sock with
+    | Opened -> Lwt_io.write out_chan response_str >>= fun () -> accept_loop ()
+    | Closed ->
+        Lwt_io.eprintl "Error: client connection is closed" >>= fun () ->
+        Lwt.return ()
+    | Aborted exn ->
+        Lwt_io.eprintl ("An expected error: %s" ^ Printexc.to_string exn)
+        >>= fun () -> Lwt.return ()
   in
   accept_loop ()
 
 let () =
   let open Lwt.Infix in
   Lwt_main.run
-    ( Lwt_io.printf "Server starting ...\n\n" >>= fun () ->
+    ( Lwt_io.printf "Server is running ...\n\n" >>= fun () ->
       start_server >>= fun () -> keep_listening )
