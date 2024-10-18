@@ -1,4 +1,4 @@
-open Lib.Http
+open Http
 open Lwt_unix
 
 val connect_to_server : file_descr Lwt.t

@@ -1,5 +1,5 @@
-open Lib.Http
-open Client_lib
+open Http
+open Client
 
 let () =
   let request =

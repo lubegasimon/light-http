@@ -1,11 +1,27 @@
 open Lwt.Infix
 open Lwt_unix
-open Lib.Http
+open Http
 
 let connect_to_server =
   let sock = socket PF_INET SOCK_STREAM 0 in
   let addr = ADDR_INET (Unix.inet_addr_loopback, 5000) in
-  connect sock addr >>= fun _ -> Lwt.return sock
+  let ( let* ) = Lwt.bind in
+  try%lwt connect sock addr >>= fun _ -> Lwt.return sock with
+  | Unix.Unix_error (Unix.ECONNREFUSED, "connect", _) ->
+      let* () = Lwt_io.eprintl "Error: failed to connect to server" in
+      Lwt_io.flush_all () >>= fun () -> Lwt.return sock
+  | Unix.Unix_error (err_code, func, param) ->
+      let* () =
+        Lwt_io.eprintf "Error: %s in %s(%s) %!"
+          (Unix.error_message err_code)
+          func param
+      in
+      Lwt_io.flush_all () >>= fun () -> Lwt.return sock
+  | exn ->
+      let* () =
+        Lwt_io.eprintl ("An expected error: %!" ^ Printexc.to_string exn)
+      in
+      Lwt_io.flush_all () >>= fun () -> Lwt.return sock
 
 let send_request sock req =
   let req_str = Request.to_string req in

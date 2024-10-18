@@ -1,11 +1,6 @@
-(executable
- (name client_app)
- (modules client_app)
- (libraries client_lib lib))
-
 (library
- (name client_lib)
- (modules client_lib)
- (libraries lib lwt.unix)
+ (name client)
+ (modules client)
+ (libraries http lwt.unix)
  (preprocess
   (pps lwt_ppx)))
