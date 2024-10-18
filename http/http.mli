@@ -7,7 +7,7 @@ module Version : sig
   val of_string : string -> t
 end
 
-module Meth : sig
+module Method : sig
   type t = [ `GET | `HEAD ]
 
   val to_string : t -> string
@@ -25,7 +25,7 @@ end
 
 module Request : sig
   type t = {
-    meth : Meth.t;
+    meth : Method.t;
     uri : string;
     headers : Header.headers;
     version : Version.t;

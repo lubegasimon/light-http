@@ -16,7 +16,7 @@ module Version = struct
     | _ -> raise Version_not_implemented
 end
 
-module Meth = struct
+module Method = struct
   type t = [ `GET | `HEAD ]
 
   let to_string = function `GET -> "GET" | `HEAD -> "HEAD"
@@ -67,7 +67,7 @@ let parse_others =
 
 module Request = struct
   type t = {
-    meth : Meth.t;
+    meth : Method.t;
     uri : string;
     headers : Header.headers;
     version : Version.t;
@@ -76,7 +76,7 @@ module Request = struct
 
   let to_string req =
     let req_ln =
-      Meth.to_string req.meth ^ " " ^ req.uri ^ " "
+      Method.to_string req.meth ^ " " ^ req.uri ^ " "
       ^ Version.to_string req.version
       ^ "\r\n"
     in
@@ -137,3 +137,4 @@ module Response = struct
       body;
     }
 end
+
