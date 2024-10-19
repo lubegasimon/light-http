@@ -1,4 +1,3 @@
 (executable
  (name app)
  (libraries client))
-j
